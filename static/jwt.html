@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local JWT Studio — Inspector & Signer</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --accent: #0f62fe;
+      --accent-hover: #0043ce;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+      --header-color: #e11d48;
+      --payload-color: #7c3aed;
+      --sig-color: #0284c7;
+      --success-bg: #ecfdf5;
+      --success-border: #a7f3d0;
+      --success-text: #065f46;
+      --error-bg: #fef2f2;
+      --error-border: #fecaca;
+      --error-text: #991b1b;
+      --warn-bg: #fffbeb;
+      --warn-border: #fde68a;
+      --warn-text: #92400e;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation Header */
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--card-border);
+      padding: 0.85rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .tab-switcher {
+      display: flex;
+      background: #f1f5f9;
+      padding: 0.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      gap: 0.25rem;
+    }
+
+    .tab-btn {
+      padding: 0.45rem 1.1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      background: #ffffff;
+      color: var(--accent);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+
+    .privacy-tag {
+      font-size: 0.75rem;
+      color: #047857;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #ecfdf5;
+      padding: 0.3rem 0.65rem;
+      border-radius: 9999px;
+      border: 1px solid #a7f3d0;
+      font-weight: 500;
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1200px;
+      width: 100%;
+      margin: 1.75rem auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      flex: 1;
+    }
+
+    .tab-content {
+      display: none;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    /* Card Styles */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .card-head {
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fafafa;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .card-title {
+      font-size: 0.825rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-body {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Form Fields & Alignment */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      align-items: start;
+    }
+
+    @media (max-width: 800px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 1.5rem;
+      margin-bottom: 0.4rem;
+    }
+
+    label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      text-transform: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      font-weight: 500;
+    }
+
+    input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      min-width: 14px;
+      margin: 0;
+      padding: 0;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    select, input:not([type="checkbox"]), textarea {
+      width: 100%;
+      background: #f8fafc;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 0.65rem 0.85rem;
+      font-size: 0.85rem;
+      outline: none;
+      transition: all 0.15s ease;
+    }
+
+    select {
+      height: 38px;
+    }
+
+    textarea.mono, input.mono {
+      font-family: var(--font-mono);
+      line-height: 1.5;
+    }
+
+    select:focus, input:focus, textarea:focus {
+      background: #ffffff;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(15, 98, 254, 0.15);
+    }
+
+    /* Buttons */
+    .btn {
+      background: #f1f5f9;
+      color: var(--text);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 0.45rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: #e2e8f0;
+      color: var(--text);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      color: white;
+    }
+
+    .pill-btn {
+      background: #f1f5f9;
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      border-radius: 9999px;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.725rem;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .pill-btn:hover {
+      background: #e2e8f0;
+      color: var(--text);
+    }
+
+    /* Status Pill */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .status-pill.valid {
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: var(--success-text);
+    }
+
+    .status-pill.invalid {
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: var(--error-text);
+    }
+
+    .status-pill.unsigned {
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      color: var(--warn-text);
+    }
+
+    /* Summary Bar */
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      background: #ffffff;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.85rem 1.25rem;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    .summary-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .summary-label {
+      font-size: 0.725rem;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .summary-val {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text);
+      font-weight: 500;
+      word-break: break-all;
+    }
+
+    .badge-header-tag { color: var(--header-color); }
+    .badge-payload-tag { color: var(--payload-color); }
+    .badge-sig-tag { color: var(--sig-color); }
+
+    /* Output Displays */
+    .token-display-box {
+      background: #f8fafc;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      line-height: 1.6;
+      word-break: break-all;
+      min-height: 120px;
+    }
+
+    .jwt-p-header { color: var(--header-color); font-weight: 600; }
+    .jwt-p-dot { color: var(--text-dim); }
+    .jwt-p-payload { color: var(--payload-color); font-weight: 600; }
+    .jwt-p-sig { color: var(--sig-color); font-weight: 600; }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: #0f172a;
+      color: white;
+      padding: 0.7rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    #toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+      </div>
+      <span>JWT Studio</span>
+    </div>
+
+    <!-- Tab Buttons -->
+    <div class="tab-switcher">
+      <button id="tab-btn-validator" class="tab-btn active">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Validator & Inspector
+      </button>
+      <button id="tab-btn-signer" class="tab-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Signer & Builder
+      </button>
+    </div>
+
+    <div class="privacy-tag">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Zero Network Calls &bull; Pure Local
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: VALIDATOR & INSPECTOR (DECODER)      -->
+    <!-- ========================================== -->
+    <div id="tab-validator" class="tab-content active">
+
+      <!-- Step 1: Encoded Token Input -->
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">Encoded Token Ingestion</span>
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <div id="v-status-pill" class="status-pill valid">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+              <span id="v-status-text">Signature Verified</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <textarea id="v-jwt-input" class="mono" rows="4" placeholder="Paste or edit your JWT token here (header.payload.signature)..."></textarea>
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <span style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600;">Sample:</span>
+              <select id="v-sample-picker" style="width: auto; height: 32px; padding: 0.2rem 0.6rem;">
+                <option value="rs256_access">OAuth2 / Access Token (RS256)</option>
+                <option value="spiffe_svid">SPIFFE Workload JWT-SVID (RS256)</option>
+                <option value="hs256_standard">Standard HMAC Token (HS256)</option>
+                <option value="es256_standard">ECDSA Token (ES256)</option>
+                <option value="none_unsigned">Unsecured Token (none)</option>
+              </select>
+            </div>
+            <div style="display: flex; gap: 0.4rem;">
+              <button id="v-btn-copy-token" class="btn">Copy Token</button>
+              <button id="v-btn-paste" class="btn">Paste</button>
+              <button id="v-btn-clear" class="btn">Clear</button>
+              <button id="v-btn-to-signer" class="btn btn-primary">Edit in Signer &rarr;</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2: Telemetry Overview -->
+      <div class="summary-strip">
+        <div class="summary-item">
+          <span class="summary-label">Algorithm</span>
+          <span id="v-meta-alg" class="summary-val badge-header-tag">RS256</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Subject (sub)</span>
+          <span id="v-meta-sub" class="summary-val badge-payload-tag">--</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Issued At (iat)</span>
+          <span id="v-meta-iat" class="summary-val">--</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Expiration (exp)</span>
+          <span id="v-meta-exp" class="summary-val">--</span>
+        </div>
+      </div>
+
+      <!-- Step 3: Decoded Payload & Signature Verification Deck -->
+      <div class="form-row">
+
+        <!-- Decoded Payload Claims -->
+        <section class="card">
+          <div class="card-head">
+            <span class="card-title badge-payload-tag">Decoded Payload Claims</span>
+            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+              <button class="pill-btn" id="v-btn-iat-now">Set iat = Now</button>
+              <button class="pill-btn" id="v-btn-exp-1h">+1h Exp</button>
+              <button class="pill-btn" id="v-btn-format">Format JSON</button>
+              <button class="pill-btn" id="v-btn-copy-payload">Copy JSON</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <textarea id="v-payload-output" class="mono" rows="14" style="color: #6b21a8; background: #faf5ff;" placeholder="Edit or inspect payload claims JSON..."></textarea>
+          </div>
+        </section>
+
+        <!-- Header & Verification Key Deck -->
+        <section class="card" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div>
+            <div class="card-head">
+              <span class="card-title badge-header-tag">Decoded Header</span>
+              <button class="pill-btn" id="v-btn-format-header">Format</button>
+            </div>
+            <div class="card-body" style="padding-bottom: 0;">
+              <textarea id="v-header-output" class="mono" rows="4" style="color: #9f1239; background: #fff1f2;" placeholder="Edit or inspect header JSON..."></textarea>
+            </div>
+          </div>
+
+          <div style="flex: 1; display: flex; flex-direction: column;">
+            <div class="card-head">
+              <span class="card-title badge-sig-tag">Signature Verification Key</span>
+            </div>
+            <div class="card-body">
+              <div style="background: #f8fafc; border: 1px solid var(--card-border); border-radius: 6px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                <div class="label-row">
+                  <span id="v-key-type-label" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Public Key PEM (RS256)</span>
+                  <label id="v-b64-option" class="checkbox-label" style="display: none;">
+                    <input type="checkbox" id="v-secret-is-b64">
+                    Base64 Secret
+                  </label>
+                </div>
+                <textarea id="v-verify-key" class="mono" rows="5" placeholder="Enter public key PEM or HMAC secret to verify..."></textarea>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: SIGNER & BUILDER (ENCODER)           -->
+    <!-- ========================================== -->
+    <div id="tab-signer" class="tab-content">
+
+      <!-- Step 1: Algorithm & Key -->
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">1. Algorithm & Signing Key</span>
+          <button id="s-btn-gen-key" class="btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 2-2 2m-1.5 1.5L14 9M3 21l3-3m1.5-1.5L11 13m0 0 3-3m-3 3-3-3m6 0 3 3"/></svg>
+            Generate New Key Pair
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            
+            <div class="form-group">
+              <div class="label-row">
+                <label for="s-alg-select">Signing Algorithm</label>
+              </div>
+              <select id="s-alg-select">
+                <optgroup label="RSA (Asymmetric)">
+                  <option value="RS256" selected>RS256 (RSA SHA-256)</option>
+                  <option value="RS384">RS384 (RSA SHA-384)</option>
+                  <option value="RS512">RS512 (RSA SHA-512)</option>
+                  <option value="PS256">PS256 (RSA-PSS SHA-256)</option>
+                  <option value="PS384">PS384 (RSA-PSS SHA-384)</option>
+                  <option value="PS512">PS512 (RSA-PSS SHA-512)</option>
+                </optgroup>
+                <optgroup label="HMAC (Symmetric)">
+                  <option value="HS256">HS256 (HMAC SHA-256)</option>
+                  <option value="HS384">HS384 (HMAC SHA-384)</option>
+                  <option value="HS512">HS512 (HMAC SHA-512)</option>
+                </optgroup>
+                <optgroup label="ECDSA (Elliptic Curve)">
+                  <option value="ES256">ES256 (ECDSA P-256)</option>
+                  <option value="ES384">ES384 (ECDSA P-384)</option>
+                  <option value="ES512">ES512 (ECDSA P-521)</option>
+                </optgroup>
+                <optgroup label="Unsecured">
+                  <option value="none">none (Unsecured)</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <div class="label-row">
+                <label id="s-key-label" for="s-key-input">Private Key (PEM PKCS#8)</label>
+                <label id="s-hmac-b64-wrapper" class="checkbox-label" style="display: none;">
+                  <input type="checkbox" id="s-secret-is-b64">
+                  Base64 Secret
+                </label>
+              </div>
+              <textarea id="s-key-input" class="mono" rows="3" placeholder="Enter private key PEM or secret..."></textarea>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2: Claims & Header Builder -->
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">2. Payload Claims & Header Definition</span>
+          <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+            <button class="pill-btn" id="s-btn-tpl-spiffe">SPIFFE Workload SVID</button>
+            <button class="pill-btn" id="s-btn-tpl-standard">Standard OIDC</button>
+            <button class="pill-btn" id="s-btn-iat-now">Set iat = Now</button>
+            <button class="pill-btn" id="s-btn-exp-1h">+1h Exp</button>
+            <button class="pill-btn" id="s-btn-add-jti">Add UUID jti</button>
+            <button class="pill-btn" id="s-btn-format">Format JSON</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <div class="label-row">
+                <label for="s-payload-editor" style="color: var(--payload-color);">Payload JSON (Claims)</label>
+              </div>
+              <textarea id="s-payload-editor" class="mono" rows="10" style="color: #6b21a8; background: #faf5ff;"></textarea>
+            </div>
+            <div class="form-group">
+              <div class="label-row">
+                <label for="s-header-editor" style="color: var(--header-color);">Header JSON</label>
+              </div>
+              <textarea id="s-header-editor" class="mono" rows="10" style="color: #9f1239; background: #fff1f2;"></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3: Generated Output Deck -->
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title" style="color: var(--sig-color);">3. Generated Signed JWT</span>
+          <div style="display: flex; gap: 0.5rem;">
+            <button id="s-btn-copy-token" class="btn btn-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              Copy Token
+            </button>
+            <button id="s-btn-to-validator" class="btn">
+              Test in Validator &rarr;
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="s-token-display" class="token-display-box"></div>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <div id="toast">Copied to clipboard</div>
+
+  <script>
+    const DEFAULT_SECRET = "your-256-bit-secret";
+
+    // Track state to share symmetrically across tabs
+    let currentPublicKeyPem = '';
+    let currentPrivateKeyPem = '';
+    let sCurrentToken = '';
+
+    // --- Tab Switching & State Mirroring Logic ---
+    const tabBtnValidator = document.getElementById('tab-btn-validator');
+    const tabBtnSigner = document.getElementById('tab-btn-signer');
+    const tabValidator = document.getElementById('tab-validator');
+    const tabSigner = document.getElementById('tab-signer');
+
+    async function switchTab(tab) {
+      if (tab === 'signer') {
+        await syncValidatorToSigner();
+        tabBtnValidator.classList.remove('active');
+        tabBtnSigner.classList.add('active');
+        tabValidator.classList.remove('active');
+        tabSigner.classList.add('active');
+        window.location.hash = '#signer';
+      } else {
+        await syncSignerToValidator();
+        tabBtnSigner.classList.remove('active');
+        tabBtnValidator.classList.add('active');
+        tabSigner.classList.remove('active');
+        tabValidator.classList.add('active');
+        window.location.hash = '#validator';
+      }
+    }
+
+    tabBtnValidator.addEventListener('click', () => switchTab('validator'));
+    tabBtnSigner.addEventListener('click', () => switchTab('signer'));
+
+    // --- Crypto & Base64URL Utilities ---
+    function b64UrlDecode(str) {
+      str = str.replace(/-/g, '+').replace(/_/g, '/');
+      while (str.length % 4) str += '=';
+      const binary = atob(str);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    function b64UrlEncode(uint8Array) {
+      let binary = '';
+      for (let i = 0; i < uint8Array.byteLength; i++) binary += String.fromCharCode(uint8Array[i]);
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function b64UrlEncodeStr(str) {
+      return b64UrlEncode(new TextEncoder().encode(str));
+    }
+
+    function pemToBuffer(pem) {
+      const clean = pem.replace(/-----BEGIN [A-Z0-9 ]+-----/g, '').replace(/-----END [A-Z0-9 ]+-----/g, '').replace(/\s+/g, '');
+      const binary = atob(clean);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes.buffer;
+    }
+
+    function bufferToPem(buffer, label) {
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+      const lines = b64.match(/.{1,64}/g) || [];
+      return `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`;
+    }
+
+    const toast = document.getElementById('toast');
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    // ==========================================
+    // VALIDATOR TAB ELEMENTS
+    // ==========================================
+    const vJwtInput = document.getElementById('v-jwt-input');
+    const vHeaderOutput = document.getElementById('v-header-output');
+    const vPayloadOutput = document.getElementById('v-payload-output');
+    const vStatusPill = document.getElementById('v-status-pill');
+    const vStatusText = document.getElementById('v-status-text');
+    const vVerifyKey = document.getElementById('v-verify-key');
+    const vKeyTypeLabel = document.getElementById('v-key-type-label');
+    const vB64Option = document.getElementById('v-b64-option');
+    const vSecretIsB64 = document.getElementById('v-secret-is-b64');
+    const vSamplePicker = document.getElementById('v-sample-picker');
+    const vMetaAlg = document.getElementById('v-meta-alg');
+    const vMetaSub = document.getElementById('v-meta-sub');
+    const vMetaIat = document.getElementById('v-meta-iat');
+    const vMetaExp = document.getElementById('v-meta-exp');
+
+    // ==========================================
+    // SIGNER TAB ELEMENTS
+    // ==========================================
+    const sAlgSelect = document.getElementById('s-alg-select');
+    const sKeyInput = document.getElementById('s-key-input');
+    const sKeyLabel = document.getElementById('s-key-label');
+    const sHmacB64Wrapper = document.getElementById('s-hmac-b64-wrapper');
+    const sSecretIsB64 = document.getElementById('s-secret-is-b64');
+    const sPayloadEditor = document.getElementById('s-payload-editor');
+    const sHeaderEditor = document.getElementById('s-header-editor');
+    const sTokenDisplay = document.getElementById('s-token-display');
+
+    function vUpdateStatus(type, msg) {
+      vStatusPill.className = `status-pill ${type}`;
+      vStatusText.textContent = msg;
+      if (type === 'valid') {
+        vStatusPill.querySelector('svg').innerHTML = '<path d="M20 6 9 17l-5-5"/>';
+      } else if (type === 'invalid') {
+        vStatusPill.querySelector('svg').innerHTML = '<path d="M18 6 6 18M6 6l12 12"/>';
+      } else {
+        vStatusPill.querySelector('svg').innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>';
+      }
+    }
+
+    // Inspect Encoded Token (changes to v-jwt-input)
+    async function vInspectToken() {
+      const token = (vJwtInput.value || '').trim();
+      if (!token) {
+        vHeaderOutput.value = '';
+        vPayloadOutput.value = '';
+        vMetaAlg.textContent = '--';
+        vMetaSub.textContent = '--';
+        vMetaIat.textContent = '--';
+        vMetaExp.textContent = '--';
+        vUpdateStatus('invalid', 'No Token Provided');
+        return;
+      }
+
+      const parts = token.split('.');
+      if (parts.length < 2 || parts.length > 3) {
+        vHeaderOutput.value = '';
+        vPayloadOutput.value = '';
+        vUpdateStatus('invalid', 'Malformed JWT');
+        return;
+      }
+
+      let headerObj, payloadObj;
+      try {
+        headerObj = JSON.parse(new TextDecoder().decode(b64UrlDecode(parts[0])));
+        vHeaderOutput.value = JSON.stringify(headerObj, null, 2);
+      } catch (e) {
+        vHeaderOutput.value = 'Invalid Header: ' + e.message;
+        vUpdateStatus('invalid', 'Header Decode Failed');
+        return;
+      }
+
+      try {
+        payloadObj = JSON.parse(new TextDecoder().decode(b64UrlDecode(parts[1])));
+        vPayloadOutput.value = JSON.stringify(payloadObj, null, 2);
+      } catch (e) {
+        vPayloadOutput.value = 'Invalid Payload: ' + e.message;
+        vUpdateStatus('invalid', 'Payload Decode Failed');
+        return;
+      }
+
+      const alg = headerObj.alg || 'RS256';
+      vMetaAlg.textContent = alg;
+      vMetaSub.textContent = payloadObj.sub || 'None';
+
+      const now = Math.floor(Date.now() / 1000);
+      vMetaIat.textContent = payloadObj.iat ? new Date(payloadObj.iat * 1000).toLocaleString() : 'N/A';
+      if (payloadObj.exp) {
+        const isExp = now > payloadObj.exp;
+        const expStr = new Date(payloadObj.exp * 1000).toLocaleString();
+        vMetaExp.textContent = `${expStr} (${isExp ? 'Expired' : 'Active'})`;
+        vMetaExp.style.color = isExp ? '#dc2626' : '#16a34a';
+      } else {
+        vMetaExp.textContent = 'None';
+        vMetaExp.style.color = 'inherit';
+      }
+
+      if (alg.startsWith('HS')) {
+        vKeyTypeLabel.textContent = `HMAC Secret (${alg})`;
+        vB64Option.style.display = 'inline-flex';
+        if (!vVerifyKey.value || vVerifyKey.value.includes('BEGIN PUBLIC KEY')) {
+          vVerifyKey.value = DEFAULT_SECRET;
+        }
+      } else if (alg === 'none') {
+        vKeyTypeLabel.textContent = 'Unsecured (No Key Required)';
+        vB64Option.style.display = 'none';
+        vUpdateStatus('unsigned', 'Unsecured Token (alg: none)');
+        return;
+      } else {
+        vKeyTypeLabel.textContent = `Public Key PEM (${alg})`;
+        vB64Option.style.display = 'none';
+      }
+
+      if (parts.length !== 3 || !parts[2]) {
+        vUpdateStatus('invalid', 'Missing Signature');
+        return;
+      }
+
+      await vCheckSignature(alg, parts[0], parts[1], parts[2]);
+    }
+
+    // Two-way editing on Validator side: When user edits decoded Header or Payload
+    async function vOnDecodedInput() {
+      let headerObj, payloadObj;
+      try { headerObj = JSON.parse(vHeaderOutput.value); } catch (e) { vUpdateStatus('invalid', 'Invalid Header JSON'); return; }
+      try { payloadObj = JSON.parse(vPayloadOutput.value); } catch (e) { vUpdateStatus('invalid', 'Invalid Payload JSON'); return; }
+
+      const alg = headerObj.alg || 'RS256';
+      vMetaAlg.textContent = alg;
+      vMetaSub.textContent = payloadObj.sub || 'None';
+
+      const now = Math.floor(Date.now() / 1000);
+      vMetaIat.textContent = payloadObj.iat ? new Date(payloadObj.iat * 1000).toLocaleString() : 'N/A';
+      if (payloadObj.exp) {
+        const isExp = now > payloadObj.exp;
+        const expStr = new Date(payloadObj.exp * 1000).toLocaleString();
+        vMetaExp.textContent = `${expStr} (${isExp ? 'Expired' : 'Active'})`;
+        vMetaExp.style.color = isExp ? '#dc2626' : '#16a34a';
+      } else {
+        vMetaExp.textContent = 'None';
+        vMetaExp.style.color = 'inherit';
+      }
+
+      const hB64 = b64UrlEncodeStr(JSON.stringify(headerObj));
+      const pB64 = b64UrlEncodeStr(JSON.stringify(payloadObj));
+
+      if (alg === 'none') {
+        vJwtInput.value = `${hB64}.${pB64}.`;
+        vUpdateStatus('unsigned', 'Unsecured Token (alg: none)');
+        return;
+      }
+
+      if (alg.startsWith('HS')) {
+        vKeyTypeLabel.textContent = `HMAC Secret (${alg})`;
+        vB64Option.style.display = 'inline-flex';
+        const keyStr = (vVerifyKey.value || '').trim();
+        if (keyStr) {
+          try {
+            const secretBytes = vSecretIsB64.checked ? b64UrlDecode(keyStr) : new TextEncoder().encode(keyStr);
+            const hashName = alg === 'HS384' ? 'SHA-384' : alg === 'HS512' ? 'SHA-512' : 'SHA-256';
+            const cryptoKey = await crypto.subtle.importKey('raw', secretBytes, { name: 'HMAC', hash: hashName }, false, ['sign']);
+            const sigBytes = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(`${hB64}.${pB64}`));
+            const sigB64 = b64UrlEncode(new Uint8Array(sigBytes));
+            vJwtInput.value = `${hB64}.${pB64}.${sigB64}`;
+            vUpdateStatus('valid', 'Signature Verified');
+            return;
+          } catch (e) {}
+        }
+      }
+
+      // For asymmetric keys, preserve existing signature or update first 2 segments
+      const existingToken = (vJwtInput.value || '').trim();
+      const existingParts = existingToken.split('.');
+      const sigPart = existingParts.length === 3 ? existingParts[2] : '';
+      vJwtInput.value = `${hB64}.${pB64}.${sigPart}`;
+      if (sigPart) {
+        await vCheckSignature(alg, hB64, pB64, sigPart);
+      } else {
+        vUpdateStatus('invalid', 'Signature Mismatch');
+      }
+    }
+
+    async function vCheckSignature(alg, hB64, pB64, sigB64) {
+      const data = new TextEncoder().encode(`${hB64}.${pB64}`);
+      const sigBytes = b64UrlDecode(sigB64);
+      const keyStr = (vVerifyKey.value || '').trim();
+
+      if (!keyStr) {
+        vUpdateStatus('unsigned', 'Paste public key or secret to verify signature');
+        return;
+      }
+
+      try {
+        let valid = false;
+
+        if (alg.startsWith('HS')) {
+          const secretBytes = vSecretIsB64.checked ? b64UrlDecode(keyStr) : new TextEncoder().encode(keyStr);
+          const hashName = alg === 'HS384' ? 'SHA-384' : alg === 'HS512' ? 'SHA-512' : 'SHA-256';
+          const cryptoKey = await crypto.subtle.importKey('raw', secretBytes, { name: 'HMAC', hash: hashName }, false, ['verify']);
+          valid = await crypto.subtle.verify('HMAC', cryptoKey, sigBytes, data);
+
+        } else if (alg.startsWith('RS') || alg.startsWith('PS')) {
+          const isPSS = alg.startsWith('PS');
+          const hashName = alg.endsWith('384') ? 'SHA-384' : alg.endsWith('512') ? 'SHA-512' : 'SHA-256';
+          const cryptoKey = await crypto.subtle.importKey('spki', pemToBuffer(keyStr), { name: isPSS ? 'RSA-PSS' : 'RSASSA-PKCS1-v1_5', hash: hashName }, false, ['verify']);
+          const params = isPSS ? { name: 'RSA-PSS', saltLength: hashName === 'SHA-256' ? 32 : hashName === 'SHA-384' ? 48 : 64 } : 'RSASSA-PKCS1-v1_5';
+          valid = await crypto.subtle.verify(params, cryptoKey, sigBytes, data);
+
+        } else if (alg.startsWith('ES')) {
+          const curve = alg === 'ES384' ? 'P-384' : alg === 'ES512' ? 'P-521' : 'P-256';
+          const hashName = alg === 'ES384' ? 'SHA-384' : alg === 'ES512' ? 'SHA-512' : 'SHA-256';
+          const cryptoKey = await crypto.subtle.importKey('spki', pemToBuffer(keyStr), { name: 'ECDSA', namedCurve: curve }, false, ['verify']);
+          valid = await crypto.subtle.verify({ name: 'ECDSA', hash: hashName }, cryptoKey, sigBytes, data);
+        }
+
+        vUpdateStatus(valid ? 'valid' : 'invalid', valid ? 'Signature Verified' : 'Invalid Signature');
+
+      } catch (err) {
+        vUpdateStatus('invalid', 'Verification: ' + err.message);
+      }
+    }
+
+    async function vLoadSample(type) {
+      if (type === 'rs256_access') {
+        const keyPair = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1,0,1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+        currentPublicKeyPem = bufferToPem(await crypto.subtle.exportKey('spki', keyPair.publicKey), 'PUBLIC KEY');
+        currentPrivateKeyPem = bufferToPem(await crypto.subtle.exportKey('pkcs8', keyPair.privateKey), 'PRIVATE KEY');
+        vVerifyKey.value = currentPublicKeyPem;
+        const header = { alg: "RS256", typ: "JWT", kid: "server-key-1" };
+        const payload = {
+          sub: "jessica",
+          iss: "https://login.dune.com/oauth2",
+          client_id: "client-d96e033c",
+          scope: "read write admin",
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + 3600
+        };
+        const h = b64UrlEncodeStr(JSON.stringify(header));
+        const p = b64UrlEncodeStr(JSON.stringify(payload));
+        const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', keyPair.privateKey, new TextEncoder().encode(`${h}.${p}`));
+        vJwtInput.value = `${h}.${p}.${b64UrlEncode(new Uint8Array(sig))}`;
+      } else if (type === 'spiffe_svid') {
+        const keyPair = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1,0,1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+        currentPublicKeyPem = bufferToPem(await crypto.subtle.exportKey('spki', keyPair.publicKey), 'PUBLIC KEY');
+        currentPrivateKeyPem = bufferToPem(await crypto.subtle.exportKey('pkcs8', keyPair.privateKey), 'PRIVATE KEY');
+        vVerifyKey.value = currentPublicKeyPem;
+        const header = { alg: "RS256", typ: "JWT", kid: "spiffe-workload-key-1" };
+        const payload = {
+          sub: "spiffe://example.org/ns/production/sa/payment-service",
+          iss: "https://oidc.example.org",
+          aud: ["https://api.internal.example.org", "spiffe://example.org/ns/production/sa/database-service"],
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + 3600
+        };
+        const h = b64UrlEncodeStr(JSON.stringify(header));
+        const p = b64UrlEncodeStr(JSON.stringify(payload));
+        const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', keyPair.privateKey, new TextEncoder().encode(`${h}.${p}`));
+        vJwtInput.value = `${h}.${p}.${b64UrlEncode(new Uint8Array(sig))}`;
+      } else if (type === 'hs256_standard') {
+        const header = { alg: "HS256", typ: "JWT" };
+        const payload = {
+          sub: "service-account-42",
+          iss: "https://auth.example.com",
+          aud: "https://api.example.com",
+          scope: "read write admin",
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + 7200
+        };
+        vVerifyKey.value = DEFAULT_SECRET;
+        vSecretIsB64.checked = false;
+        const h = b64UrlEncodeStr(JSON.stringify(header));
+        const p = b64UrlEncodeStr(JSON.stringify(payload));
+        const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(DEFAULT_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+        const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${h}.${p}`));
+        vJwtInput.value = `${h}.${p}.${b64UrlEncode(new Uint8Array(sig))}`;
+      } else if (type === 'es256_standard') {
+        const keyPair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+        currentPublicKeyPem = bufferToPem(await crypto.subtle.exportKey('spki', keyPair.publicKey), 'PUBLIC KEY');
+        currentPrivateKeyPem = bufferToPem(await crypto.subtle.exportKey('pkcs8', keyPair.privateKey), 'PRIVATE KEY');
+        vVerifyKey.value = currentPublicKeyPem;
+        const header = { alg: "ES256", typ: "JWT" };
+        const payload = { sub: "workload-node-01", iss: "https://identity.example.org", exp: Math.floor(Date.now() / 1000) + 86400 };
+        const h = b64UrlEncodeStr(JSON.stringify(header));
+        const p = b64UrlEncodeStr(JSON.stringify(payload));
+        const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, keyPair.privateKey, new TextEncoder().encode(`${h}.${p}`));
+        vJwtInput.value = `${h}.${p}.${b64UrlEncode(new Uint8Array(sig))}`;
+      } else if (type === 'none_unsigned') {
+        const h = b64UrlEncodeStr(JSON.stringify({ alg: "none", typ: "JWT" }));
+        const p = b64UrlEncodeStr(JSON.stringify({ sub: "unsecured-workload", iss: "https://example.org" }));
+        vJwtInput.value = `${h}.${p}.`;
+      }
+      await vInspectToken();
+    }
+
+    // Event listeners on Validator
+    vJwtInput.addEventListener('input', vInspectToken);
+    vVerifyKey.addEventListener('input', vInspectToken);
+    vSecretIsB64.addEventListener('change', vInspectToken);
+    vHeaderOutput.addEventListener('input', vOnDecodedInput);
+    vPayloadOutput.addEventListener('input', vOnDecodedInput);
+    vSamplePicker.addEventListener('change', () => vLoadSample(vSamplePicker.value));
+
+    document.getElementById('v-btn-copy-payload').addEventListener('click', () => {
+      navigator.clipboard.writeText(vPayloadOutput.value).then(() => showToast('Payload JSON copied!'));
+    });
+
+    document.getElementById('v-btn-copy-token').addEventListener('click', () => {
+      if (!vJwtInput.value) return;
+      navigator.clipboard.writeText(vJwtInput.value).then(() => showToast('JWT copied to clipboard!'));
+    });
+
+    document.getElementById('v-btn-paste').addEventListener('click', async () => {
+      try {
+        vJwtInput.value = (await navigator.clipboard.readText()).trim();
+        await vInspectToken();
+      } catch (e) {}
+    });
+
+    document.getElementById('v-btn-clear').addEventListener('click', () => {
+      vJwtInput.value = '';
+      vInspectToken();
+    });
+
+    document.getElementById('v-btn-to-signer').addEventListener('click', () => switchTab('signer'));
+
+    document.getElementById('v-btn-iat-now').addEventListener('click', () => {
+      try {
+        const p = JSON.parse(vPayloadOutput.value);
+        p.iat = Math.floor(Date.now() / 1000);
+        vPayloadOutput.value = JSON.stringify(p, null, 2);
+        vOnDecodedInput();
+      } catch (e) {}
+    });
+
+    document.getElementById('v-btn-exp-1h').addEventListener('click', () => {
+      try {
+        const p = JSON.parse(vPayloadOutput.value);
+        p.exp = Math.floor(Date.now() / 1000) + 3600;
+        vPayloadOutput.value = JSON.stringify(p, null, 2);
+        vOnDecodedInput();
+      } catch (e) {}
+    });
+
+    document.getElementById('v-btn-format').addEventListener('click', () => {
+      try {
+        vPayloadOutput.value = JSON.stringify(JSON.parse(vPayloadOutput.value), null, 2);
+        vOnDecodedInput();
+      } catch (e) {}
+    });
+
+    document.getElementById('v-btn-format-header').addEventListener('click', () => {
+      try {
+        vHeaderOutput.value = JSON.stringify(JSON.parse(vHeaderOutput.value), null, 2);
+        vOnDecodedInput();
+      } catch (e) {}
+    });
+
+    // ==========================================
+    // SIGNER TAB LOGIC
+    // ==========================================
+
+    sAlgSelect.addEventListener('change', async () => {
+      const alg = sAlgSelect.value;
+      try {
+        const h = JSON.parse(sHeaderEditor.value || '{}');
+        h.alg = alg;
+        sHeaderEditor.value = JSON.stringify(h, null, 2);
+      } catch (e) {}
+
+      if (alg.startsWith('HS')) {
+        sKeyLabel.textContent = 'HMAC Secret';
+        sHmacB64Wrapper.style.display = 'inline-flex';
+        if (!sKeyInput.value || sKeyInput.value.includes('BEGIN PRIVATE KEY')) {
+          sKeyInput.value = DEFAULT_SECRET;
+        }
+      } else if (alg === 'none') {
+        sKeyLabel.textContent = 'No Key (Unsecured)';
+        sHmacB64Wrapper.style.display = 'none';
+        sKeyInput.value = '';
+      } else {
+        sKeyLabel.textContent = 'Private Key (PEM PKCS#8)';
+        sHmacB64Wrapper.style.display = 'none';
+        if (sKeyInput.value === DEFAULT_SECRET || !sKeyInput.value) {
+          await sGenerateKeyPair(alg);
+        }
+      }
+      await sSignToken();
+    });
+
+    document.getElementById('s-btn-gen-key').addEventListener('click', () => sGenerateKeyPair(sAlgSelect.value));
+
+    async function sGenerateKeyPair(alg) {
+      try {
+        if (alg.startsWith('HS')) {
+          const bytes = new Uint8Array(32);
+          crypto.getRandomValues(bytes);
+          sKeyInput.value = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+          currentPublicKeyPem = '';
+          currentPrivateKeyPem = '';
+          showToast('Generated 256-bit Random Secret');
+        } else if (alg.startsWith('RS') || alg.startsWith('PS')) {
+          const isPSS = alg.startsWith('PS');
+          const hashName = alg.endsWith('384') ? 'SHA-384' : alg.endsWith('512') ? 'SHA-512' : 'SHA-256';
+          const pair = await crypto.subtle.generateKey(
+            { name: isPSS ? 'RSA-PSS' : 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: hashName },
+            true,
+            ['sign', 'verify']
+          );
+          const privBuf = await crypto.subtle.exportKey('pkcs8', pair.privateKey);
+          const pubBuf = await crypto.subtle.exportKey('spki', pair.publicKey);
+          currentPrivateKeyPem = bufferToPem(privBuf, 'PRIVATE KEY');
+          currentPublicKeyPem = bufferToPem(pubBuf, 'PUBLIC KEY');
+          sKeyInput.value = currentPrivateKeyPem;
+          showToast('Generated RSA 2048-bit Keypair');
+        } else if (alg.startsWith('ES')) {
+          const curve = alg === 'ES384' ? 'P-384' : alg === 'ES512' ? 'P-521' : 'P-256';
+          const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: curve }, true, ['sign', 'verify']);
+          const privBuf = await crypto.subtle.exportKey('pkcs8', pair.privateKey);
+          const pubBuf = await crypto.subtle.exportKey('spki', pair.publicKey);
+          currentPrivateKeyPem = bufferToPem(privBuf, 'PRIVATE KEY');
+          currentPublicKeyPem = bufferToPem(pubBuf, 'PUBLIC KEY');
+          sKeyInput.value = currentPrivateKeyPem;
+          showToast(`Generated ECDSA ${curve} Keypair`);
+        }
+        await sSignToken();
+      } catch (e) {
+        showToast('Key generation error: ' + e.message);
+      }
+    }
+
+    async function sSignToken() {
+      let headerObj, payloadObj;
+      try { headerObj = JSON.parse(sHeaderEditor.value); } catch (e) { sTokenDisplay.textContent = 'Invalid Header JSON'; return; }
+      try { payloadObj = JSON.parse(sPayloadEditor.value); } catch (e) { sTokenDisplay.textContent = 'Invalid Payload JSON'; return; }
+
+      const alg = headerObj.alg || sAlgSelect.value;
+      const hB64 = b64UrlEncodeStr(JSON.stringify(headerObj));
+      const pB64 = b64UrlEncodeStr(JSON.stringify(payloadObj));
+      const dataStr = `${hB64}.${pB64}`;
+
+      if (alg === 'none') {
+        sCurrentToken = `${dataStr}.`;
+        sRenderToken(hB64, pB64, '');
+        return;
+      }
+
+      const dataBytes = new TextEncoder().encode(dataStr);
+      try {
+        let sigB64 = '';
+        if (alg.startsWith('HS')) {
+          const secretBytes = sSecretIsB64.checked ? b64UrlDecode(sKeyInput.value) : new TextEncoder().encode(sKeyInput.value);
+          const hashName = alg === 'HS384' ? 'SHA-384' : alg === 'HS512' ? 'SHA-512' : 'SHA-256';
+          const key = await crypto.subtle.importKey('raw', secretBytes, { name: 'HMAC', hash: hashName }, false, ['sign']);
+          const sig = await crypto.subtle.sign('HMAC', key, dataBytes);
+          sigB64 = b64UrlEncode(new Uint8Array(sig));
+        } else if (alg.startsWith('RS') || alg.startsWith('PS')) {
+          if (!sKeyInput.value) {
+            await sGenerateKeyPair(alg);
+            return;
+          }
+          const isPSS = alg.startsWith('PS');
+          const hashName = alg.endsWith('384') ? 'SHA-384' : alg.endsWith('512') ? 'SHA-512' : 'SHA-256';
+          const key = await crypto.subtle.importKey('pkcs8', pemToBuffer(sKeyInput.value), { name: isPSS ? 'RSA-PSS' : 'RSASSA-PKCS1-v1_5', hash: hashName }, false, ['sign']);
+          const params = isPSS ? { name: 'RSA-PSS', saltLength: hashName === 'SHA-256' ? 32 : hashName === 'SHA-384' ? 48 : 64 } : 'RSASSA-PKCS1-v1_5';
+          const sig = await crypto.subtle.sign(params, key, dataBytes);
+          sigB64 = b64UrlEncode(new Uint8Array(sig));
+        } else if (alg.startsWith('ES')) {
+          if (!sKeyInput.value) {
+            await sGenerateKeyPair(alg);
+            return;
+          }
+          const curve = alg === 'ES384' ? 'P-384' : alg === 'ES512' ? 'P-521' : 'P-256';
+          const hashName = alg === 'ES384' ? 'SHA-384' : alg === 'ES512' ? 'SHA-512' : 'SHA-256';
+          const key = await crypto.subtle.importKey('pkcs8', pemToBuffer(sKeyInput.value), { name: 'ECDSA', namedCurve: curve }, false, ['sign']);
+          const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: hashName }, key, dataBytes);
+          sigB64 = b64UrlEncode(new Uint8Array(sig));
+        }
+
+        sCurrentToken = `${dataStr}.${sigB64}`;
+        sRenderToken(hB64, pB64, sigB64);
+      } catch (err) {
+        sTokenDisplay.innerHTML = `<span style="color: #dc2626;">Signing error: ${err.message}</span>`;
+      }
+    }
+
+    function sRenderToken(h, p, s) {
+      sTokenDisplay.innerHTML = `<span class="jwt-p-header">${h}</span><span class="jwt-p-dot">.</span><span class="jwt-p-payload">${p}</span><span class="jwt-p-dot">.</span><span class="jwt-p-sig">${s}</span>`;
+    }
+
+    // Workload / Claim Helper Buttons on Signer
+    document.getElementById('s-btn-tpl-spiffe').addEventListener('click', () => {
+      sPayloadEditor.value = JSON.stringify({
+        sub: "spiffe://example.org/ns/prod/sa/backend-service",
+        iss: "https://oidc.example.org",
+        aud: ["https://api.example.org", "spiffe://example.org/ns/prod/sa/payment-service"],
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600
+      }, null, 2);
+      sSignToken();
+    });
+
+    document.getElementById('s-btn-tpl-standard').addEventListener('click', () => {
+      sPayloadEditor.value = JSON.stringify({
+        sub: "usr_94821038",
+        name: "Jane Doe",
+        email: "jane.doe@example.com",
+        iss: "https://auth.example.com",
+        aud: "https://api.example.com",
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600
+      }, null, 2);
+      sSignToken();
+    });
+
+    document.getElementById('s-btn-iat-now').addEventListener('click', () => {
+      try {
+        const p = JSON.parse(sPayloadEditor.value);
+        p.iat = Math.floor(Date.now() / 1000);
+        sPayloadEditor.value = JSON.stringify(p, null, 2);
+        sSignToken();
+      } catch (e) {}
+    });
+
+    document.getElementById('s-btn-exp-1h').addEventListener('click', () => {
+      try {
+        const p = JSON.parse(sPayloadEditor.value);
+        p.exp = Math.floor(Date.now() / 1000) + 3600;
+        sPayloadEditor.value = JSON.stringify(p, null, 2);
+        sSignToken();
+      } catch (e) {}
+    });
+
+    document.getElementById('s-btn-add-jti').addEventListener('click', () => {
+      try {
+        const p = JSON.parse(sPayloadEditor.value);
+        p.jti = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+        sPayloadEditor.value = JSON.stringify(p, null, 2);
+        sSignToken();
+      } catch (e) {}
+    });
+
+    document.getElementById('s-btn-format').addEventListener('click', () => {
+      try {
+        sHeaderEditor.value = JSON.stringify(JSON.parse(sHeaderEditor.value), null, 2);
+        sPayloadEditor.value = JSON.stringify(JSON.parse(sPayloadEditor.value), null, 2);
+        sSignToken();
+      } catch (e) {}
+    });
+
+    sHeaderEditor.addEventListener('input', sSignToken);
+    sPayloadEditor.addEventListener('input', sSignToken);
+    sKeyInput.addEventListener('input', sSignToken);
+    sSecretIsB64.addEventListener('change', sSignToken);
+
+    document.getElementById('s-btn-copy-token').addEventListener('click', () => {
+      if (!sCurrentToken) return;
+      navigator.clipboard.writeText(sCurrentToken).then(() => showToast('JWT copied to clipboard!'));
+    });
+
+    document.getElementById('s-btn-to-validator').addEventListener('click', () => switchTab('validator'));
+
+    // ==========================================
+    // SYMMETRIC TAB SYNCHRONIZATION
+    // ==========================================
+
+    async function syncValidatorToSigner() {
+      // 1. Sync Header & Algorithm
+      if (vHeaderOutput.value) {
+        sHeaderEditor.value = vHeaderOutput.value;
+        try {
+          const h = JSON.parse(vHeaderOutput.value);
+          if (h.alg) {
+            sAlgSelect.value = h.alg;
+            if (h.alg.startsWith('HS')) {
+              sKeyLabel.textContent = 'HMAC Secret';
+              sHmacB64Wrapper.style.display = 'inline-flex';
+            } else if (h.alg === 'none') {
+              sKeyLabel.textContent = 'No Key (Unsecured)';
+              sHmacB64Wrapper.style.display = 'none';
+            } else {
+              sKeyLabel.textContent = 'Private Key (PEM PKCS#8)';
+              sHmacB64Wrapper.style.display = 'none';
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 2. Sync Payload
+      if (vPayloadOutput.value) {
+        sPayloadEditor.value = vPayloadOutput.value;
+      }
+
+      // 3. Sync Secret / Key
+      const alg = sAlgSelect.value;
+      if (alg.startsWith('HS') && vVerifyKey.value) {
+        sKeyInput.value = vVerifyKey.value;
+        sSecretIsB64.checked = vSecretIsB64.checked;
+      } else if (alg !== 'none' && !sKeyInput.value) {
+        if (currentPrivateKeyPem) {
+          sKeyInput.value = currentPrivateKeyPem;
+        } else {
+          await sGenerateKeyPair(alg);
+          return;
+        }
+      }
+
+      await sSignToken();
+    }
+
+    async function syncSignerToValidator() {
+      // 1. Sync Encoded Token
+      if (sCurrentToken) {
+        vJwtInput.value = sCurrentToken;
+      }
+
+      // 2. Sync Header & Payload
+      if (sHeaderEditor.value) {
+        vHeaderOutput.value = sHeaderEditor.value;
+      }
+      if (sPayloadEditor.value) {
+        vPayloadOutput.value = sPayloadEditor.value;
+      }
+
+      // 3. Sync Verification Key
+      const alg = sAlgSelect.value;
+      if (alg.startsWith('HS')) {
+        vVerifyKey.value = sKeyInput.value;
+        vSecretIsB64.checked = sSecretIsB64.checked;
+      } else if (alg !== 'none') {
+        if (currentPublicKeyPem) {
+          vVerifyKey.value = currentPublicKeyPem;
+        }
+      }
+
+      await vInspectToken();
+    }
+
+    // --- Initial Startup ---
+    (async function init() {
+      const hash = window.location.hash;
+      await vLoadSample('rs256_access');
+      if (hash === '#signer') {
+        switchTab('signer');
+      }
+    })();
+  </script>
+</body>
+</html>

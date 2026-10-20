@@ -1,23 +1,17 @@
-FROM --platform=$BUILDPLATFORM golang:alpine as builder
+FROM --platform=$BUILDPLATFORM golang:alpine AS builder
 
-RUN echo $BUILDPLATFORM
+WORKDIR /src
+COPY . .
 
-COPY . /src
-RUN mkdir -p /src/.build && \
-    ls -al /src/.build && \
-    cd /src/.build && \
-    go build -o /src/.build/tools-server github.com/vivshankar/tools-go/cmd/server
+RUN CGO_ENABLED=0 go build -o /src/bin/tools-server ./cmd/server
 
-FROM --platform=$BUILDPLATFORM alpine
-
-RUN echo $BUILDPLATFORM
+FROM --platform=$BUILDPLATFORM alpine:latest
 
 WORKDIR /app
-
 ENV GOTRACEBACK=crash
 
-COPY --from=builder /src/.build/tools-server /app
+COPY --from=builder /src/bin/tools-server /app/tools-server
 
 EXPOSE 8080
 
-CMD /app/tools-server
+CMD ["/app/tools-server"]
