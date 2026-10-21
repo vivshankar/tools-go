@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/go-jose/go-jose/v3"
-	josejwt "github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4"
+	josejwt "github.com/go-jose/go-jose/v4/jwt"
 	"github.com/golang-jwt/jwt/v4"
 )
 
@@ -120,7 +120,7 @@ func generateToken(claims interface{}, header map[string]interface{}, signingMet
 		return
 	}
 
-	rawToken, err = josejwt.Signed(signer).Claims(claims).CompactSerialize()
+	rawToken, err = josejwt.Signed(signer).Claims(claims).Serialize()
 	if err != nil {
 		return
 	}
