@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/google/uuid v1.6.0
-	github.com/ibm-verify/verify-auth-go v0.0.0-00010101000000-000000000000
+	github.com/ibm-verify/verify-auth-go v0.1.2
 	github.com/jellydator/ttlcache/v3 v3.4.1
 	github.com/stretchr/testify v1.11.1
 )
@@ -22,5 +22,3 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/ibm-verify/verify-auth-go => ../../ibm-verify/verify-auth-go
