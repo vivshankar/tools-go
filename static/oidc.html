@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OIDC Debugger — Authorization Code + PKCE</title>
+  <link rel="stylesheet" href="/static/studio.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+      </div>
+      <span>OIDC Debugger</span>
+    </div>
+    <a class="brand-link" href="/jwt-studio">JWT Studio &rarr;</a>
+  </header>
+
+  <main style="max-width: 860px;">
+    {{if .Error}}<div class="alert alert-error" role="alert">{{.Error}}</div>{{end}}
+
+    <form method="post" action="/oidc/start" class="card">
+      <div class="card-head">
+        <span class="card-title">Authorization code flow with PKCE</span>
+      </div>
+      <div class="card-body">
+        <p class="hint">Sign in at the OP. This service receives the code at its own redirect URI, exchanges it for tokens, and shows them. It is meant for learning and testing.</p>
+
+        <div class="form-group">
+          <div class="label-row"><label for="issuer">IBM Verify tenant hostname or OP issuer</label></div>
+          <input type="text" id="issuer" name="issuer" value="{{.Issuer}}" placeholder="acme.verify.ibm.com or https://op.example.com/oauth2" required autocomplete="off">
+          <p class="hint" style="margin-top: 0.4rem;">A bare hostname becomes <code>https://&lt;hostname&gt;/oauth2</code>. A value with a scheme is used as the issuer. Discovery is cached for an hour.</p>
+        </div>
+
+        <div class="form-group">
+          <div class="label-row"><label for="client_id">Client ID</label></div>
+          <input type="text" id="client_id" name="client_id" value="{{.ClientID}}" required autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <div class="label-row"><label>Client authentication</label></div>
+          <div class="radios">
+            <label class="checkbox-label"><input type="radio" name="auth_method" value="public" {{if ne .AuthMethod "private_key_jwt"}}checked{{end}}> Public client</label>
+            <label class="checkbox-label"><input type="radio" name="auth_method" value="private_key_jwt" {{if eq .AuthMethod "private_key_jwt"}}checked{{end}}> private_key_jwt</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="label-row"><label for="redirect_uri">Redirect URI</label></div>
+          <input type="text" id="redirect_uri" name="redirect_uri" value="{{.RedirectURI}}" class="mono" required autocomplete="off">
+          <p class="hint" style="margin-top: 0.4rem;">Register exactly this value on the client at the OP.</p>
+        </div>
+
+        <div class="form-group">
+          <div class="label-row"><label for="scopes">Scopes</label></div>
+          <input type="text" id="scopes" name="scopes" value="{{.Scopes}}" placeholder="openid profile" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <div class="label-row"><label for="authorization_details">authorization_details (RFC 9396)</label></div>
+          <textarea id="authorization_details" name="authorization_details" class="mono" rows="5" spellcheck="false" placeholder='[{"type": "payment_initiation", "actions": ["initiate"]}]'>{{.AuthorizationDetails}}</textarea>
+          <p class="hint" style="margin-top: 0.4rem;">Optional. A JSON array, sent on the authorization and token requests.</p>
+        </div>
+
+        <div class="form-group">
+          <div class="label-row"><label>private_key_jwt key</label></div>
+          <p class="hint">Unless you supply your own key below, tools signs the client assertion with its own key. Register this JWKS URL on the client at the OP:</p>
+          <div class="readonly" style="margin-top: 0.4rem;">{{.JWKSURL}}</div>
+          <p class="hint" style="margin-top: 0.4rem;">Key ID <code>{{.KeyID}}</code>. The key is stored in a file next to the server and created if it is missing, so it stays the same across restarts. Everyone using this service shares it, so it is for learning only.</p>
+
+          <details style="margin-top: 0.75rem;" {{if .UserKey}}open{{end}}>
+            <summary>Use my own private key</summary>
+            <p class="hint">The OP must already trust the matching public key, because it is not in the JWKS above. The key is held in memory for up to 10 minutes.</p>
+            <div class="form-group" style="margin-top: 0.75rem;">
+              <div class="label-row"><label for="user_key">Private key (JWK or PEM)</label></div>
+              <textarea id="user_key" name="user_key" class="mono" rows="6" spellcheck="false" autocomplete="off">{{.UserKey}}</textarea>
+            </div>
+            <div class="form-row" style="margin-top: 0.75rem;">
+              <div class="form-group">
+                <div class="label-row"><label for="user_key_kid">kid (optional)</label></div>
+                <input type="text" id="user_key_kid" name="user_key_kid" value="{{.UserKeyKID}}" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <div class="label-row"><label for="user_key_alg">alg (optional)</label></div>
+                <input type="text" id="user_key_alg" name="user_key_alg" value="{{.UserKeyAlg}}" placeholder="RS256" autocomplete="off">
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <div>
+          <button class="btn btn-primary" type="submit">Sign in</button>
+        </div>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

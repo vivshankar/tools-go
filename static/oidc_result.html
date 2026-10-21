@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OIDC Debugger — Tokens</title>
+  <link rel="stylesheet" href="/static/studio.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+      </div>
+      <span>OIDC Debugger</span>
+    </div>
+    <div style="display: flex; gap: 1.25rem;">
+      <a class="brand-link" href="/oidc-debugger">New flow</a>
+      <a class="brand-link" href="/jwt-studio">JWT Studio &rarr;</a>
+    </div>
+  </header>
+
+  <main style="max-width: 960px;">
+    {{if .Error}}
+      <section class="card">
+        <div class="card-head"><span class="card-title">The flow did not complete</span></div>
+        <div class="card-body">
+          <div class="alert alert-error" role="alert">{{.Error}}</div>
+          <p class="hint">Each sign-in can be used once. <a class="brand-link" href="/oidc-debugger">Start again</a>.</p>
+          {{template "rerun" .Request}}
+        </div>
+      </section>
+    {{else}}
+      {{with .Result}}
+      <section class="card">
+        <div class="card-head"><span class="card-title">Token response</span></div>
+        <div class="card-body">
+          <div class="summary-strip">
+            <div class="summary-item"><span class="summary-label">Issuer</span><span class="summary-val">{{.Issuer}}</span></div>
+            <div class="summary-item"><span class="summary-label">Client</span><span class="summary-val">{{.ClientID}}</span></div>
+            <div class="summary-item"><span class="summary-label">Client authentication</span><span class="summary-val">{{.AuthMethod}}</span></div>
+          </div>
+          <pre class="code-block">{{.ResponseJSON}}</pre>
+        </div>
+      </section>
+
+      {{template "token" .AccessToken}}
+      {{template "token" .IDToken}}
+      {{end}}
+
+      <section class="card">
+        <div class="card-head"><span class="card-title">Run again</span></div>
+        <div class="card-body">
+          {{template "rerun" .Request}}
+        </div>
+      </section>
+    {{end}}
+  </main>
+</body>
+</html>
+
+{{define "rerun"}}
+  {{if .ClientID}}
+  <form method="post" action="/oidc/start">
+    <p class="hint">Repeat the flow against the same OP with the same client, authentication, redirect URI, scopes and <code>authorization_details</code>. It gets a new state and PKCE verifier. To change anything, use <a class="brand-link" href="/oidc-debugger">New flow</a>.</p>
+    <input type="hidden" name="issuer" value="{{.Issuer}}">
+    <input type="hidden" name="client_id" value="{{.ClientID}}">
+    <input type="hidden" name="auth_method" value="{{.AuthMethod}}">
+    <input type="hidden" name="redirect_uri" value="{{.RedirectURI}}">
+    <input type="hidden" name="scopes" value="{{.Scopes}}">
+    <input type="hidden" name="authorization_details" value="{{.AuthorizationDetails}}">
+    <input type="hidden" name="user_key" value="{{.UserKey}}">
+    <input type="hidden" name="user_key_kid" value="{{.UserKeyKID}}">
+    <input type="hidden" name="user_key_alg" value="{{.UserKeyAlg}}">
+    <button class="btn btn-primary" type="submit">Run again</button>
+  </form>
+  {{end}}
+{{end}}
+
+{{define "token"}}
+  {{if .Present}}
+  <section class="card">
+    <div class="card-head">
+      <span class="card-title">{{.Title}} <span class="tag">{{.Format}}</span></span>
+      {{if .Error}}
+        <span class="status-pill invalid">Not validated</span>
+      {{else}}
+        <span class="status-pill valid">Validated</span>
+      {{end}}
+    </div>
+    <div class="card-body">
+      <p class="hint">{{.Method}}</p>
+
+      {{if .Error}}
+        <div class="alert alert-error" role="alert">{{.Error}}</div>
+      {{else}}
+        <table class="claims">
+          {{range .Claims}}
+          <tr>
+            <th scope="row">{{.Name}}</th>
+            <td>
+              {{if .Multiline}}<pre>{{.Value}}</pre>{{else}}{{.Value}}{{end}}
+              {{if .Note}}<span class="claim-note">{{.Note}}</span>{{end}}
+            </td>
+          </tr>
+          {{end}}
+        </table>
+      {{end}}
+
+      <details>
+        <summary>Raw token</summary>
+        <pre class="code-block">{{.Raw}}</pre>
+      </details>
+    </div>
+  </section>
+  {{end}}
+{{end}}
